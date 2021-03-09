@@ -4,6 +4,7 @@ var gcloudStorage = require('@google-cloud/storage');
 var gutil = require('gulp-util');
 var mime = require('mime');
 var through = require('through2');
+var Stream = require('stream');
 
 var PLUGIN_NAME = 'gulp-gcloud-publish';
 var PluginError = gutil.PluginError;
@@ -43,7 +44,7 @@ function normalizePath(base, file) {
 
   // ensure there is a trailing slash in the base path
   if (base && !/\/$/.test(base)) {
-    base += '/';
+    base += '';
   }
 
   // ensure the is no starting slash
@@ -110,7 +111,16 @@ function gPublish(options) {
       resumable: !!options.resumable
     };
 
-    file.pipe(
+    let stream = new Stream.PassThrough();
+
+		if ( file.isBuffer() && !file.pipe ) {
+			stream.end( file.contents );
+		} else {
+      stream = file;
+    }
+
+
+    stream.pipe(
       bucket.file(uploadOptions.destination).createWriteStream(uploadOptions)
     )
       .on('error', function(e){
